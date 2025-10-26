@@ -74,10 +74,15 @@ yarn-error.log
 !.yarn/sdks
 !.yarn/versions
 
-# Backend files (exclude from frontend-only repository)
-backend/
-database_script.sql
-DEPLOYMENT_GUIDE.md
+# Database files (optional - uncomment if you don't want to track database files)
+# database_script.sql
+# DEPLOYMENT_GUIDE.md
+
+# Backend build artifacts
+backend/**/bin/
+backend/**/obj/
+backend/**/*.db
+backend/**/*.ldf
 
 # IDE files
 .vscode/

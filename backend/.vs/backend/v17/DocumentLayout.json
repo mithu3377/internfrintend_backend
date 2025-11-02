@@ -3,8 +3,28 @@
   "WorkspaceRootPath": "C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\InternshipPortal.API\\Program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:InternshipPortal.API\\Program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\Controllers\\AuthController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Controllers\\AuthController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\Controllers\\CompaniesController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Controllers\\CompaniesController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\Controllers\\CertificatesController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Controllers\\CertificatesController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\Controllers\\AssignmentsController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Controllers\\AssignmentsController.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\COMPLETE_SETUP.sql||{CC5D8DF0-88F4-4BB2-9DBB-B48CEE65C30A}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:COMPLETE_SETUP.sql||{CC5D8DF0-88F4-4BB2-9DBB-B48CEE65C30A}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\Data\\InternshipPortalContext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:Data\\InternshipPortalContext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -14,20 +34,80 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 2,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "Program.cs",
-              "DocumentMoniker": "C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\InternshipPortal.API\\Program.cs",
-              "RelativeDocumentMoniker": "InternshipPortal.API\\Program.cs",
-              "ToolTip": "C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\InternshipPortal.API\\Program.cs",
-              "RelativeToolTip": "InternshipPortal.API\\Program.cs",
+              "DocumentIndex": 1,
+              "Title": "CompaniesController.cs",
+              "DocumentMoniker": "C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\Controllers\\CompaniesController.cs",
+              "RelativeDocumentMoniker": "Controllers\\CompaniesController.cs",
+              "ToolTip": "C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\Controllers\\CompaniesController.cs",
+              "RelativeToolTip": "Controllers\\CompaniesController.cs",
+              "ViewState": "AgIAAAEAAAAAaGZmZmb0v24AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-26T17:03:12.152Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "CertificatesController.cs",
+              "DocumentMoniker": "C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\Controllers\\CertificatesController.cs",
+              "RelativeDocumentMoniker": "Controllers\\CertificatesController.cs",
+              "ToolTip": "C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\Controllers\\CertificatesController.cs",
+              "RelativeToolTip": "Controllers\\CertificatesController.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-20T14:49:17.49Z",
+              "WhenOpened": "2025-10-26T17:03:11.104Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "AuthController.cs",
+              "DocumentMoniker": "C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\Controllers\\AuthController.cs",
+              "RelativeDocumentMoniker": "Controllers\\AuthController.cs",
+              "ToolTip": "C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\Controllers\\AuthController.cs",
+              "RelativeToolTip": "Controllers\\AuthController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-26T17:03:09.904Z",
               "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "AssignmentsController.cs",
+              "DocumentMoniker": "C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\Controllers\\AssignmentsController.cs",
+              "RelativeDocumentMoniker": "Controllers\\AssignmentsController.cs",
+              "ToolTip": "C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\Controllers\\AssignmentsController.cs",
+              "RelativeToolTip": "Controllers\\AssignmentsController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-26T17:03:07.183Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "COMPLETE_SETUP.sql",
+              "DocumentMoniker": "C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\COMPLETE_SETUP.sql",
+              "RelativeDocumentMoniker": "COMPLETE_SETUP.sql",
+              "ToolTip": "C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\COMPLETE_SETUP.sql",
+              "RelativeToolTip": "COMPLETE_SETUP.sql",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000826|",
+              "WhenOpened": "2025-10-26T17:03:04.395Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "InternshipPortalContext.cs",
+              "DocumentMoniker": "C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\Data\\InternshipPortalContext.cs",
+              "RelativeDocumentMoniker": "Data\\InternshipPortalContext.cs",
+              "ToolTip": "C:\\Users\\Ali Haider\\internfrontend-main\\internfrontend-main\\backend\\Data\\InternshipPortalContext.cs",
+              "RelativeToolTip": "Data\\InternshipPortalContext.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-26T17:02:43.585Z"
             }
           ]
         }

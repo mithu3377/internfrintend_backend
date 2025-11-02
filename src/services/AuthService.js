@@ -15,7 +15,12 @@ class AuthService {
       
       if (token && userData) {
         this.token = token;
-        this.user = JSON.parse(userData);
+        const user = JSON.parse(userData);
+        // Normalize role to lowercase for consistency
+        if (user.role) {
+          user.role = user.role.toLowerCase();
+        }
+        this.user = user;
         apiService.setToken(token);
         return true;
       }
@@ -26,14 +31,17 @@ class AuthService {
     }
   }
 
-  // Login user
+  // Login user - accepts email but sends as username to backend
   async login(email, password) {
     try {
       console.log('AuthService: Attempting API login...');
+      // Backend expects username, so we use the email field as username
       const response = await apiService.login(email, password);
       
       if (response.token && response.user) {
         this.token = response.token;
+        // Normalize role to lowercase for consistency
+        response.user.role = (response.user.role || '').toLowerCase();
         this.user = response.user;
         
         // Store in AsyncStorage
@@ -44,6 +52,7 @@ class AuthService {
         apiService.setToken(response.token);
         
         console.log('AuthService: API login successful');
+        console.log('AuthService: Normalized user role:', response.user.role);
         return { success: true, user: response.user };
       }
       
@@ -70,8 +79,34 @@ class AuthService {
     console.log('AuthService: Mock login attempt for:', email);
     
     const mockUsers = {
-      'nauman@admin.com': { 
+      // Backend test users
+      'admin': { 
         id: 1, 
+        username: 'admin',
+        email: 'admin@portal.com', 
+        role: 'Admin', 
+        name: 'Administrator',
+        token: 'mock-admin-token-123'
+      },
+      'manager': { 
+        id: 2, 
+        username: 'manager',
+        email: 'manager@portal.com', 
+        role: 'Manager', 
+        name: 'Manager',
+        token: 'mock-manager-token-123'
+      },
+      'student': { 
+        id: 3, 
+        username: 'student',
+        email: 'student@portal.com', 
+        role: 'Student', 
+        name: 'Student',
+        token: 'mock-student-token-123'
+      },
+      // Old mock users
+      'nauman@admin.com': { 
+        id: 4, 
         email: 'nauman@admin.com', 
         role: 'admin', 
         name: 'Nauman Admin',
@@ -99,7 +134,7 @@ class AuthService {
         token: 'mock-student-token-789'
       },
       'manager@company.com': { 
-        id: 5, 
+        id: 8, 
         email: 'manager@company.com', 
         role: 'manager', 
         name: 'Manager Name',
@@ -108,7 +143,7 @@ class AuthService {
         token: 'mock-manager-token-123'
       },
       'john@techcorp.com': { 
-        id: 6, 
+        id: 9, 
         email: 'john@techcorp.com', 
         role: 'manager', 
         name: 'John Smith',
@@ -119,6 +154,11 @@ class AuthService {
     };
 
     const mockPasswords = {
+      // Backend test passwords
+      'admin': 'admin123',
+      'manager': 'manager123',
+      'student': 'student123',
+      // Old mock passwords
       'nauman@admin.com': 'Admin123',
       'ali@student.com': 'Pass789',
       'qadis@student.com': 'Student456',
@@ -127,21 +167,24 @@ class AuthService {
       'john@techcorp.com': 'John@Tech'
     };
 
-    if (mockUsers[email] && mockPasswords[email] === password) {
-      const user = mockUsers[email];
-      this.token = user.token;
-      this.user = user;
-      
-      // Store in AsyncStorage
-      await AsyncStorage.setItem('authToken', user.token);
-      await AsyncStorage.setItem('userData', JSON.stringify(user));
-      
-      // Set token in API service
-      apiService.setToken(user.token);
-      
-      console.log('AuthService: Mock login successful for:', email);
-      return { success: true, user: user };
-    }
+      if (mockUsers[email] && mockPasswords[email] === password) {
+        const user = {...mockUsers[email]}; // Create a copy
+        // Normalize role to lowercase for consistency
+        user.role = (user.role || '').toLowerCase();
+        this.token = user.token;
+        this.user = user;
+        
+        // Store in AsyncStorage
+        await AsyncStorage.setItem('authToken', user.token);
+        await AsyncStorage.setItem('userData', JSON.stringify(user));
+        
+        // Set token in API service
+        apiService.setToken(user.token);
+        
+        console.log('AuthService: Mock login successful for:', email);
+        console.log('AuthService: Normalized user role:', user.role);
+        return { success: true, user: user };
+      }
     
     console.log('AuthService: Mock login failed - invalid credentials for:', email);
     return { success: false, message: 'Invalid email or password' };

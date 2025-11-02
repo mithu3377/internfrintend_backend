@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext.js';
 import { useNavigation } from '../context/NavigationContext.js';
-import apiService from '../services/ApiService';
+import apiService from '../services/ApiService.js';
 
 const AssignStudentScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -19,7 +19,6 @@ const AssignStudentScreen = () => {
   const [students, setStudents] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const { user } = useAuth();
   const { navigate } = useNavigation();
 
@@ -30,121 +29,150 @@ const AssignStudentScreen = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      setError(null);
+      // Load ALL students then filter on client to ensure correctness
+      const studentsApi = await apiService.getStudents();
+      // Load all companies
+      const allCompanies = await apiService.getCompanies();
       
-      // Load students and companies in parallel
-      const [studentsData, companiesData] = await Promise.all([
-        apiService.getStudents(),
-        apiService.getCompanies()
-      ]);
+      console.log('AssignStudentScreen: Loaded students:', studentsApi);
+      console.log('AssignStudentScreen: Loaded companies:', allCompanies);
       
-      setStudents(studentsData);
-      setCompanies(companiesData);
-    } catch (err) {
-      console.error('Error loading data:', err);
-      setError('Failed to load data');
+      // Normalize and filter on the client to be robust across backends
+      const normalized = (studentsApi || []).map(s => ({
+        studentID: s.studentID ?? s.StudentID,
+        userID: s.userID ?? s.UserID,
+        name: s.name ?? s.Name,
+        regNo: s.regNo ?? s.RegNo,
+        technology: s.technology ?? s.Technology,
+        hasShownInterest: s.hasShownInterest ?? s.HasShownInterest ?? (s.internshipStatus ?? s.InternshipStatus) === 1,
+        assignedCompanyID: s.assignedCompanyID ?? s.AssignedCompanyID ?? null,
+        internshipStatus: s.internshipStatus ?? s.InternshipStatus,
+        certificateStatus: s.certificateStatus ?? s.CertificateStatus,
+      }));
+
+      // Only students who showed interest (regardless of current assignment status)
+      const interestedAndUnassigned = normalized.filter(s =>
+        (s.hasShownInterest === true || s.internshipStatus === 1) &&
+        s.studentID
+      );
+
+      // Ensure uniqueness by studentID to avoid duplicates
+      const uniqueById = Object.values(interestedAndUnassigned.reduce((acc, s) => {
+        acc[s.studentID] = acc[s.studentID] || s;
+        return acc;
+      }, {}));
+
+      setStudents(uniqueById);
+      setCompanies(allCompanies || []);
+    } catch (error) {
+      console.error('AssignStudentScreen: Error loading data:', error);
+      Alert.alert('Error', 'Failed to load data. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAssign = async (studentId) => {
+  const handleAssign = async (student) => {
     if (!selectedCompanyId) {
       Alert.alert('Error', 'Please select a company first');
       return;
     }
 
     try {
-      // Create assignment using API
-      const student = students.find(s => s.id === studentId);
-      const company = companies.find(c => c.id === selectedCompanyId);
+      // Find the selected company
+      const company = companies.find(c => c.companyID === parseInt(selectedCompanyId));
+      
+      if (!company) {
+        Alert.alert('Error', 'Company not found');
+        return;
+      }
+
+      // Check if company has available slots
+      if (company.currentInternships >= company.maxInternships) {
+        Alert.alert('Error', 'Company has no available slots');
+        return;
+      }
+
+      // Create assignment - Use PascalCase for C# backend
+      const now = new Date();
+      const endDate = new Date(now);
+      endDate.setMonth(now.getMonth() + 3); // 3 months internship
       
       const assignmentData = {
-        studentId: studentId,
-        companyId: selectedCompanyId,
-        studentName: `${student?.regNo || 'Unknown'} (${student?.technology || 'Unknown Tech'})`,
-        companyName: company?.name || '',
-        assignedDate: new Date().toISOString(),
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(), // 90 days from now
-        status: 1, // 1=Assigned
-        progress: 0,
-        certificateIssued: false,
+        StudentID: student.studentID || student.StudentID,
+        CompanyID: company.companyID,
+        StudentName: student.name || student.Name,
+        CompanyName: company.name,
+        AssignedDate: now.toISOString(),
+        StartDate: now.toISOString(),
+        EndDate: endDate.toISOString(),
+        Status: 1, // Assigned
+        Progress: 0,
+        CertificateIssued: false,
       };
 
       await apiService.createAssignment(assignmentData);
-      
-      // Update student status
-      if (student) {
-        await apiService.updateStudent(studentId, {
-          userId: student.userId,
-          regNo: student.regNo,
-          technology: student.technology,
-          hasShownInterest: student.hasShownInterest,
-          assignedCompanyId: selectedCompanyId,
-          assignedCompanyName: company?.name || '',
-          internshipStatus: 2, // 2=Assigned
-          certificateStatus: student.certificateStatus,
-          startDate: new Date().toISOString(),
-          endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-        });
-      }
 
-      // Update company current internships count
-      if (company) {
-        await apiService.updateCompany(selectedCompanyId, {
-          name: company.name,
-          area: company.area,
-          technologies: company.technologies || '',
-          maxInternships: company.maxInternships,
-          currentInternships: company.currentInternships + 1,
-          managerId: company.managerId,
-          managerName: company.managerName,
-          managerEmail: company.managerEmail,
-          isActive: company.isActive,
-        });
-      }
+      // Update student - set assigned company - Use PascalCase for C# backend
+      const updatedStudent = {
+        StudentID: student.studentID || student.StudentID,
+        UserID: student.userID || student.UserID,
+        Name: student.name || student.Name,
+        RegNo: student.regNo || student.RegNo,
+        Technology: student.technology || student.Technology,
+        HasShownInterest: true,
+        AssignedCompanyID: company.companyID,
+        AssignedCompanyName: company.name,
+        InternshipStatus: 2, // Assigned
+        CertificateStatus: student.certificateStatus || student.CertificateStatus || 1,
+      };
+      await apiService.updateStudent(student.studentID || student.StudentID, updatedStudent);
 
-      Alert.alert('Success', 'Student assigned successfully!');
-      
-      // Refresh data
-      loadData();
-      
-    } catch (err) {
-      console.error('Error assigning student:', err);
+      // Update company - increment current internships
+      const updatedCompany = {
+        CompanyID: company.companyID,
+        Name: company.name,
+        Area: company.area,
+        Technologies: company.technologies,
+        MaxInternships: company.maxInternships || company.MaxInternships,
+        CurrentInternships: company.currentInternships + 1,
+        ManagerID: company.managerID || company.ManagerID,
+        IsActive: company.isActive !== undefined ? company.isActive : true,
+      };
+      await apiService.updateCompany(company.companyID, updatedCompany);
+
+      Alert.alert('Success', 'Student assigned successfully!', [
+        { text: 'OK', onPress: loadData }
+      ]);
+
+      // Reset selection
+      setSelectedCompanyId('');
+    } catch (error) {
+      console.error('AssignStudentScreen: Error assigning student:', error);
       Alert.alert('Error', 'Failed to assign student. Please try again.');
     }
   };
 
-  const studentsWithInterest = students.filter(student => 
-    student.hasShownInterest && student.internshipStatus === 1
-  );
+  // `students` already filtered and normalized above
+  const studentsWithInterest = students;
+  
+  console.log('AssignStudentScreen: Total students from API:', students.length);
+  console.log('AssignStudentScreen: Students with interest data:', studentsWithInterest);
   
   const availableCompanies = companies.filter(company => 
     company.isActive && company.currentInternships < company.maxInternships
   );
 
   const filteredStudents = studentsWithInterest.filter(student =>
-    student.regNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.name.toLowerCase().includes(searchQuery.toLowerCase())
+    (student.regNo || student.RegNo || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (student.name || student.Name || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color="#667EEA" />
-        <Text style={styles.loadingText}>Loading students and companies...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadData}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
@@ -182,28 +210,28 @@ const AssignStudentScreen = () => {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.companyScrollView}>
           {availableCompanies.map((company) => (
             <TouchableOpacity
-              key={company.id}
+              key={company.companyID}
               style={[
                 styles.companyCard,
-                selectedCompanyId === company.id && styles.selectedCompanyCard
+                selectedCompanyId === company.companyID.toString() && styles.selectedCompanyCard
               ]}
-              onPress={() => setSelectedCompanyId(company.id)}
+              onPress={() => setSelectedCompanyId(company.companyID.toString())}
             >
               <Text style={[
                 styles.companyName,
-                selectedCompanyId === company.id && styles.selectedCompanyName
+                selectedCompanyId === company.companyID.toString() && styles.selectedCompanyName
               ]}>
                 {company.name}
               </Text>
               <Text style={[
                 styles.companyArea,
-                selectedCompanyId === company.id && styles.selectedCompanyArea
+                selectedCompanyId === company.companyID.toString() && styles.selectedCompanyArea
               ]}>
                 {company.area}
               </Text>
               <Text style={[
                 styles.companySlots,
-                selectedCompanyId === company.id && styles.selectedCompanySlots
+                selectedCompanyId === company.companyID.toString() && styles.selectedCompanySlots
               ]}>
                 {company.maxInternships - company.currentInternships}/{company.maxInternships} slots
               </Text>
@@ -221,18 +249,18 @@ const AssignStudentScreen = () => {
           </View>
         ) : (
           filteredStudents.map((student) => (
-            <View key={student.id} style={styles.studentCard}>
+            <View key={student.studentID || student.StudentID} style={styles.studentCard}>
               <View style={styles.cardContent}>
-                <Text style={styles.studentName}>{student.name}</Text>
-                <Text style={styles.aridNumber}>{student.regNo}</Text>
-                <Text style={styles.technology}>{student.technology}</Text>
+                <Text style={styles.studentName}>{student.name || student.Name}</Text>
+                <Text style={styles.aridNumber}>{student.regNo || student.RegNo}</Text>
+                <Text style={styles.technology}>{student.technology || student.Technology}</Text>
               </View>
               <TouchableOpacity
                 style={[
                   styles.assignButton,
                   !selectedCompanyId && styles.disabledButton
                 ]}
-                onPress={() => handleAssign(student.id)}
+                onPress={() => handleAssign(student)}
                 disabled={!selectedCompanyId}
               >
                 <Text style={[
@@ -442,40 +470,14 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
   },
-  loadingContainer: {
-    flex: 1,
+  centerContent: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
     color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    paddingHorizontal: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#FF5722',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: '#667EEA',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
 });
 

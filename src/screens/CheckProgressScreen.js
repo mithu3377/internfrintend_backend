@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,76 +10,57 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext.js';
 import { useNavigation } from '../context/NavigationContext.js';
-import apiService from '../services/ApiService';
+import apiService from '../services/ApiService.js';
 
 const CheckProgressScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [assignments, setAssignments] = useState([]);
   const [managerCompany, setManagerCompany] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const { user } = useAuth();
   const { navigate } = useNavigation();
 
   useEffect(() => {
     loadManagerData();
-  }, [user, loadManagerData]);
+  }, []);
 
-  const loadManagerData = useCallback(async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
+  const loadManagerData = async () => {
     try {
       setLoading(true);
-      setError(null);
+      console.log('CheckProgressScreen: Loading manager data for user ID:', user?.id);
       
-      // Get companies managed by this manager
-      const companies = await apiService.getCompaniesByManager(user.id);
+      // Load manager's companies
+      const companies = await apiService.getCompaniesByManager(user?.id || 0);
+      console.log('CheckProgressScreen: Companies found:', companies);
+      
       if (companies && companies.length > 0) {
-        const company = companies[0];
-        setManagerCompany(company);
+        const firstCompany = companies[0];
+        setManagerCompany(firstCompany);
+        console.log('CheckProgressScreen: Using company:', firstCompany);
         
-        // Get assignments for this company
-        const companyAssignments = await apiService.getAssignmentsByCompany(company.id);
-        setAssignments(companyAssignments);
+        // Load active interns for this company
+        const interns = await apiService.getAssignmentsByCompany(firstCompany.companyID || firstCompany.CompanyID);
+        console.log('CheckProgressScreen: Assignments loaded:', interns);
+        setAssignments(interns || []);
+      } else {
+        console.log('CheckProgressScreen: No companies found for manager');
+        setAssignments([]);
       }
-    } catch (err) {
-      console.error('Error loading manager data:', err);
-      setError('Failed to load intern data');
+    } catch (error) {
+      console.error('CheckProgressScreen: Error loading data:', error);
+      setAssignments([]);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  };
 
   const activeAssignments = assignments.filter(assignment => 
-    assignment.status === 'assigned' || assignment.status === 'in_progress'
+    assignment.status === 1 || assignment.status === 2
   );
 
   const filteredAssignments = activeAssignments.filter(assignment =>
-    assignment.studentName.toLowerCase().includes(searchQuery.toLowerCase())
+    assignment.studentName && assignment.studentName.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#667EEA" />
-        <Text style={styles.loadingText}>Loading intern progress...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadManagerData}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
 
   const getProgressColor = (progress) => {
     if (progress === 100) return '#4CAF50'; // Green for completed
@@ -98,6 +79,15 @@ const CheckProgressScreen = () => {
       </View>
     );
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#667EEA" />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -135,11 +125,11 @@ const CheckProgressScreen = () => {
           </View>
         ) : (
           filteredAssignments.map((assignment) => (
-            <View key={assignment.id} style={styles.internCard}>
+            <View key={assignment.assignmentID} style={styles.internCard}>
               <View style={styles.cardContent}>
                 <Text style={styles.internName}>{assignment.studentName}</Text>
                 <Text style={styles.projectName}>{managerCompany?.area || 'Internship'}</Text>
-                <Text style={styles.technology}>Status: {assignment.status}</Text>
+                <Text style={styles.technology}>Status: {assignment.status === 1 ? 'Assigned' : assignment.status === 2 ? 'In Progress' : 'Completed'}</Text>
               </View>
               <View style={styles.progressContainer}>
                 {renderProgressCircle(assignment.progress || 0)}
@@ -303,40 +293,14 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
   },
-  loadingContainer: {
-    flex: 1,
+  centerContent: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
     color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    paddingHorizontal: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#FF5722',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: '#667EEA',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
 });
 

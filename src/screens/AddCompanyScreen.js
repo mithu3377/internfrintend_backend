@@ -8,11 +8,14 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import apiService from '../services/ApiService';
 import { useNavigation } from '../context/NavigationContext.js';
+import { useAuth } from '../context/AuthContext.js';
+import apiService from '../services/ApiService.js';
 
 const AddCompanyScreen = () => {
   const { navigate } = useNavigation();
+  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
   
   const [companyName, setCompanyName] = useState('');
   const [area, setArea] = useState('');
@@ -23,6 +26,8 @@ const AddCompanyScreen = () => {
   const [description, setDescription] = useState('');
 
   const handleAddCompany = async () => {
+    if (isLoading) return;
+
     if (!companyName || !area || !technologies || !maxInternships || !managerName || !managerEmail) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
@@ -34,21 +39,36 @@ const AddCompanyScreen = () => {
       return;
     }
 
+    setIsLoading(true);
+
     try {
-      // Create company using API service
+      console.log('AddCompany: Creating company with data:', {
+        companyName,
+        area,
+        technologies,
+        maxInternships: internshipsCount,
+        managerName,
+        managerEmail,
+      });
+
+      // Create company data object matching backend model
       const companyData = {
         name: companyName,
         area: area,
-        technologies: technologies, // Store multiple technologies as comma-separated string
+        technologies: technologies,
         maxInternships: internshipsCount,
-        managerId: 1, // Default manager ID - will be updated when user management is implemented
+        currentInternships: 0,
+        managerID: user?.id || 0,
         managerName: managerName,
         managerEmail: managerEmail,
         isActive: true,
       };
 
-      const newCompany = await apiService.createCompany(companyData);
+      // Call API to create company
+      const response = await apiService.createCompany(companyData);
       
+      console.log('AddCompany: Company created successfully:', response);
+
       Alert.alert('Success', 'Company enrolled successfully!', [
         {
           text: 'OK',
@@ -64,11 +84,14 @@ const AddCompanyScreen = () => {
       setManagerName('');
       setManagerEmail('');
       setDescription('');
-      
-      console.log('Company created successfully:', newCompany);
     } catch (error) {
-      console.error('Error creating company:', error);
-      Alert.alert('Error', 'Failed to create company. Please try again.');
+      console.error('AddCompany: Error creating company:', error);
+      Alert.alert(
+        'Error', 
+        error.message || 'Failed to create company. Please try again.'
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 

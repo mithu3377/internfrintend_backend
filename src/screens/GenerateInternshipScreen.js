@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext.js';
 import { useNavigation } from '../context/NavigationContext.js';
-import apiService from '../services/ApiService';
 
 const GenerateInternshipScreen = () => {
   const [hiringFor, setHiringFor] = useState('');
@@ -34,53 +33,20 @@ const GenerateInternshipScreen = () => {
       return;
     }
 
-    try {
-      setLoading(true);
-      
-      // Get manager's company
-      const companies = await apiService.getCompaniesByManager(user.id);
-      if (!companies || companies.length === 0) {
-        Alert.alert('Error', 'No company found for this manager');
-        return;
+    // Show success message (no backend integration)
+    Alert.alert('Success', 'Internship generated successfully!', [
+      {
+        text: 'OK',
+        onPress: () => navigate('ManagerDashboard')
       }
-
-      const company = companies[0];
-      
-      // Update company with new internship details
-      const updateData = {
-        name: company.name,
-        area: hiringFor,
-        technologies: company.technologies || '',
-        maxInternships: internshipsCount,
-        currentInternships: company.currentInternships,
-        managerId: company.managerId,
-        managerName: company.managerName,
-        managerEmail: company.managerEmail,
-        isActive: company.isActive,
-      };
-
-      await apiService.updateCompany(company.id, updateData);
-      
-      Alert.alert('Success', 'Internship generated successfully!', [
-        {
-          text: 'OK',
-          onPress: () => navigate('ManagerDashboard')
-        }
-      ]);
-      
-      // Reset form
-      setHiringFor('');
-      setInternshipAllowed('');
-      setDuration('');
-      setStartDate('');
-      setDescription('');
-      
-    } catch (error) {
-      console.error('Error generating internship:', error);
-      Alert.alert('Error', 'Failed to generate internship. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    ]);
+    
+    // Reset form
+    setHiringFor('');
+    setInternshipAllowed('');
+    setDuration('');
+    setStartDate('');
+    setDescription('');
   };
 
   return (

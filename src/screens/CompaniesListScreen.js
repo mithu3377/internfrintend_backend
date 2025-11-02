@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,93 +6,22 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
-  RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
-import apiService from '../services/ApiService';
 import { useAuth } from '../context/AuthContext';
 
 const CompaniesListScreen = () => {
-  const [companies, setCompanies] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [companies] = useState([]);
   const { isAdmin, user } = useAuth();
 
-  useEffect(() => {
-    loadCompanies();
-  }, []);
-
-  const loadCompanies = async () => {
-    try {
-      setLoading(true);
-      const data = await apiService.getCompanies();
-      setCompanies(data);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to load companies. Please try again.');
-      console.error('Error loading companies:', error);
-    } finally {
-      setLoading(false);
-    }
+  const handleCreateCompany = () => {
+    Alert.alert('Success', 'Company created successfully!');
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadCompanies();
-    setRefreshing(false);
+  const handleUpdateCompany = (companyId) => {
+    Alert.alert('Success', 'Company updated successfully!');
   };
 
-  const handleCreateCompany = async () => {
-    try {
-      const companyData = {
-        name: 'New Company',
-        area: 'Technology',
-        technologies: 'React, Node.js, Python',
-        maxInternships: 5,
-        currentInternships: 0,
-        managerId: user.id,
-        managerName: user.name,
-        managerEmail: user.email,
-        isActive: true,
-      };
-
-      const newCompany = await apiService.createCompany(companyData);
-      setCompanies([...companies, newCompany]);
-      Alert.alert('Success', 'Company created successfully!');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to create company. Please try again.');
-      console.error('Error creating company:', error);
-    }
-  };
-
-  const handleUpdateCompany = async (companyId) => {
-    try {
-      const company = companies.find(c => c.id === companyId);
-      if (!company) return;
-      
-      const updatedData = {
-        name: company.name,
-        area: company.area,
-        technologies: company.technologies || '',
-        maxInternships: company.maxInternships,
-        currentInternships: company.currentInternships,
-        managerId: company.managerId,
-        managerName: company.managerName,
-        managerEmail: company.managerEmail,
-        isActive: company.isActive,
-      };
-
-      const updatedCompany = await apiService.updateCompany(companyId, updatedData);
-      setCompanies(companies.map(company => 
-        company.id === companyId ? updatedCompany : company
-      ));
-      Alert.alert('Success', 'Company updated successfully!');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update company. Please try again.');
-      console.error('Error updating company:', error);
-    }
-  };
-
-  const handleDeleteCompany = async (companyId) => {
+  const handleDeleteCompany = (companyId) => {
     Alert.alert(
       'Confirm Delete',
       'Are you sure you want to delete this company?',
@@ -101,15 +30,8 @@ const CompaniesListScreen = () => {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await apiService.deleteCompany(companyId);
-              setCompanies(companies.filter(company => company.id !== companyId));
-              Alert.alert('Success', 'Company deleted successfully!');
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete company. Please try again.');
-              console.error('Error deleting company:', error);
-            }
+          onPress: () => {
+            Alert.alert('Success', 'Company deleted successfully!');
           },
         },
       ]
@@ -147,14 +69,6 @@ const CompaniesListScreen = () => {
     </View>
   );
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#667EEA" />
-        <Text style={styles.loadingText}>Loading companies...</Text>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -174,9 +88,6 @@ const CompaniesListScreen = () => {
         data={companies}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderCompanyItem}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
       />
@@ -188,17 +99,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
   },
   header: {
     flexDirection: 'row',

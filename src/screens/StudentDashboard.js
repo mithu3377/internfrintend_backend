@@ -1,15 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext.js';
 import { useNavigation } from '../context/NavigationContext.js';
-import apiService from '../services/ApiService';
+import apiService from '../services/ApiService.js';
 
 const StudentDashboard = () => {
   const { user, logout } = useAuth();
@@ -17,45 +16,73 @@ const StudentDashboard = () => {
   const [student, setStudent] = useState(null);
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
-    loadStudentData();
-  }, [user, loadStudentData]);
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        // Load the logged-in student's record
+        let normalizedStudent = null;
+        try {
+          const studentRecord = await apiService.getStudentByUserId(user?.id || 0);
+          normalizedStudent = Array.isArray(studentRecord) ? studentRecord[0] : studentRecord;
+        } catch (innerErr) {
+          // If not found or 404, fall back to loading all students and finding by UserID or Name
+          const message = (innerErr && innerErr.message ? innerErr.message : '').toLowerCase();
+          if (message.includes('not found') || message.includes('404')) {
+            try {
+              const all = await apiService.getStudents();
+              const byId = all.find(s => s.userID === user?.id || s.UserID === user?.id) || null;
+              if (byId) {
+                normalizedStudent = byId;
+              } else if (user?.name) {
+                const uname = (user.name || '').toLowerCase();
+                normalizedStudent = all.find(s => (s.name || s.Name || '').toLowerCase() === uname) || null;
+              }
+            } catch (fallbackErr) {
+              console.warn('StudentDashboard: Fallback load of students failed:', fallbackErr);
+            }
+          } else {
+            throw innerErr;
+          }
+        }
+        // Normalize to a consistent camelCase object for reliable rendering/status
+        const normalizedCamel = normalizedStudent ? {
+          studentID: normalizedStudent.studentID ?? normalizedStudent.StudentID,
+          userID: normalizedStudent.userID ?? normalizedStudent.UserID,
+          name: normalizedStudent.name ?? normalizedStudent.Name,
+          regNo: normalizedStudent.regNo ?? normalizedStudent.RegNo,
+          technology: normalizedStudent.technology ?? normalizedStudent.Technology,
+          hasShownInterest: normalizedStudent.hasShownInterest ?? normalizedStudent.HasShownInterest ?? (normalizedStudent.internshipStatus ?? normalizedStudent.InternshipStatus) === 1,
+          assignedCompanyID: normalizedStudent.assignedCompanyID ?? normalizedStudent.AssignedCompanyID ?? null,
+          assignedCompanyName: normalizedStudent.assignedCompanyName ?? normalizedStudent.AssignedCompanyName ?? null,
+          internshipStatus: normalizedStudent.internshipStatus ?? normalizedStudent.InternshipStatus ?? 0,
+          certificateStatus: normalizedStudent.certificateStatus ?? normalizedStudent.CertificateStatus ?? 1,
+        } : null;
+        setStudent(normalizedCamel);
 
-  const loadStudentData = useCallback(async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Get student by user ID
-      const studentData = await apiService.getStudentByUserId(user.id);
-      if (studentData) {
-        setStudent(studentData);
-        // Get assignments for this student
-        const studentAssignments = await apiService.getAssignmentsByStudent(studentData.id);
-        setAssignments(studentAssignments);
+        // Load assignments for the logged-in user's name to avoid UserID mismatches
+        const allAssignments = await apiService.getAssignments();
+        const uname = ((user?.name) || (normalizedCamel?.name) || '').toLowerCase();
+        const filteredByName = (allAssignments || []).filter(a => (a.studentName || '').toLowerCase() === uname);
+        setAssignments(filteredByName);
+      } catch (error) {
+        console.error('StudentDashboard: Failed to load data:', error);
+        setAssignments([]);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error('Error loading student data:', err);
-      setError('Failed to load student data');
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+    };
 
-  const currentAssignment = assignments.find(assignment => 
-    assignment.status === 1 || assignment.status === 2
-  );
+    loadData();
+  }, [user?.id]);
 
   const getStatusText = (status) => {
     switch (status) {
-      case 1: return 'Not Assigned';
+      // For Student.InternshipStatus: 0=Not Assigned, 1=Shown Interest, 2=Assigned
+      // For Assignment.Status: 1=Assigned, 2=In Progress, 3=Completed
+      case 0: return 'Not Assigned';
+      case 1: return 'Shown Interest';
       case 2: return 'Assigned';
       case 3: return 'In Progress';
       case 4: return 'Completed';
@@ -72,12 +99,17 @@ const StudentDashboard = () => {
     }
   };
 
+  // Determine the most relevant current assignment (prefer active one)
+  const currentAssignment = assignments.find(a => a.status === 2) 
+    || assignments.find(a => a.status === 1)
+    || null;
+
   const getCompanyName = () => {
     if (currentAssignment) {
       return currentAssignment.companyName;
     }
-    if (student?.assignedCompanyName) {
-      return student.assignedCompanyName;
+    if (student?.assignedCompanyName || student?.AssignedCompanyName) {
+      return student.assignedCompanyName || student.AssignedCompanyName;
     }
     return 'Not Assigned';
   };
@@ -86,8 +118,8 @@ const StudentDashboard = () => {
     if (currentAssignment) {
       return getStatusText(currentAssignment.status);
     }
-    if (student?.internshipStatus) {
-      return getStatusText(student.internshipStatus);
+    if (student?.internshipStatus !== undefined || student?.InternshipStatus !== undefined) {
+      return getStatusText(student.internshipStatus ?? student.InternshipStatus);
     }
     return 'Not Assigned';
   };
@@ -96,29 +128,27 @@ const StudentDashboard = () => {
     if (currentAssignment) {
       return getCertificateText(currentAssignment.certificateIssued ? 3 : 1);
     }
-    if (student?.certificateStatus) {
-      return getCertificateText(student.certificateStatus);
+    if (student?.certificateStatus !== undefined || student?.CertificateStatus !== undefined) {
+      return getCertificateText(student.certificateStatus ?? student.CertificateStatus);
     }
     return 'Not Available';
   };
 
+
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#667EEA" />
-        <Text style={styles.loadingText}>Loading your dashboard...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadStudentData}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
+      <ScrollView style={styles.container}>
+        <View style={styles.welcomeBanner}>
+          <Text style={styles.graduationIcon}>🎓</Text>
+          <View style={styles.welcomeTextContainer}>
+            <Text style={styles.welcomeText}>Welcome Back,</Text>
+            <Text style={styles.userName}>{user?.name}</Text>
+          </View>
+        </View>
+        <View style={{ padding: 20 }}>
+          <Text>Loading your internship status...</Text>
+        </View>
+      </ScrollView>
     );
   }
 
@@ -354,41 +384,6 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    paddingHorizontal: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#FF5722',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: '#667EEA',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
-  retryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',

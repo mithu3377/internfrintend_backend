@@ -15,8 +15,8 @@ import { useNavigation } from '../context/NavigationContext.js';
 const { height } = Dimensions.get('window');
 
 const LoginScreen = () => {
-  const [email, setEmail] = useState('ali@student.com');
-  const [password, setPassword] = useState('Pass789');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
@@ -52,15 +52,21 @@ const LoginScreen = () => {
         Alert.alert('Error', result.message || 'Invalid credentials');
       } else {
         console.log('Login successful! Navigating to dashboard...');
+        console.log('User role:', result.user?.role);
+        console.log('Full user object:', JSON.stringify(result.user, null, 2));
         
         // Navigate to appropriate dashboard based on user role
         if (result.user?.role === 'admin') {
+          console.log('Navigating to AdminDashboard');
           navigate('AdminDashboard');
         } else if (result.user?.role === 'student') {
+          console.log('Navigating to StudentDashboard');
           navigate('StudentDashboard');
         } else if (result.user?.role === 'manager') {
+          console.log('Navigating to ManagerDashboard');
           navigate('ManagerDashboard');
         } else {
+          console.log('Unknown role, defaulting to StudentDashboard');
           // Default fallback
           navigate('StudentDashboard');
         }

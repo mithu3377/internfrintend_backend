@@ -87,6 +87,10 @@ backend/**/*.ldf
 # IDE files
 .vscode/
 .idea/
+.vs/
+*.vsidx
+*.wsuo
+*.sqlite
 
 # Logs
 *.log

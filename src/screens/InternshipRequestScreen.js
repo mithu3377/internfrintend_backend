@@ -11,13 +11,12 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext.js';
 import { useNavigation } from '../context/NavigationContext.js';
-import apiService from '../services/ApiService';
+import apiService from '../services/ApiService.js';
 
 const InternshipRequestScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [companies, setCompanies] = useState([]);
+  const [availableCompanies, setAvailableCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const { user } = useAuth();
   const { navigate } = useNavigation();
 
@@ -28,86 +27,84 @@ const InternshipRequestScreen = () => {
   const loadCompanies = async () => {
     try {
       setLoading(true);
-      setError(null);
-      const companiesData = await apiService.getCompanies();
-      setCompanies(companiesData);
-    } catch (err) {
-      console.error('Error loading companies:', err);
-      setError('Failed to load companies');
+      console.log('InternshipRequest: Loading companies...');
+      
+      // Get all companies
+      const companies = await apiService.getCompanies();
+      console.log('InternshipRequest: Companies loaded:', companies);
+      
+      // Filter companies with available slots
+      const available = companies.filter(company => {
+        const hasAvailableSlots = company.currentInternships < company.maxInternships;
+        const isActive = company.isActive === undefined || company.isActive === true;
+        const result = isActive && hasAvailableSlots;
+        console.log(`Company ${company.companyID}: isActive=${isActive}, hasSlots=${hasAvailableSlots}, show=${result}`);
+        return result;
+      });
+      
+      console.log('InternshipRequest: Total companies:', companies.length);
+      console.log('InternshipRequest: Available companies:', available.length);
+      setAvailableCompanies(available);
+    } catch (error) {
+      console.error('InternshipRequest: Error loading companies:', error);
+      Alert.alert('Error', 'Failed to load companies. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleRequest = async (companyId) => {
-    if (!user?.id) {
-      Alert.alert('Error', 'User not found');
-      return;
-    }
-
     try {
-      // Get student by user ID
-      const student = await apiService.getStudentByUserId(user.id);
-      if (!student) {
-        Alert.alert('Error', 'Student profile not found');
-        return;
+      console.log('InternshipRequest: Showing interest for company:', companyId);
+      
+      // Get the student record: try by UserID; fallback by Name match
+      const students = await apiService.getStudents();
+      let currentStudent = students.find(s => s.userID === user?.id || s.UserID === user?.id);
+      if (!currentStudent && user?.name) {
+        const uname = (user.name || '').toLowerCase();
+        currentStudent = students.find(s => (s.name || s.Name || '').toLowerCase() === uname);
       }
-
-      // Update student to show interest - send complete student data
-      const updatedStudentData = {
-        userId: student.userId,
-        regNo: student.regNo,
-        technology: student.technology,
-        hasShownInterest: true,
-        assignedCompanyId: student.assignedCompanyId,
-        assignedCompanyName: student.assignedCompanyName,
-        internshipStatus: student.internshipStatus,
-        certificateStatus: student.certificateStatus,
-        startDate: student.startDate || null,
-        endDate: student.endDate || null
-      };
-
-      await apiService.updateStudent(student.id, updatedStudentData);
+      
+      console.log('InternshipRequest: Current student found:', currentStudent);
+      
+      if (currentStudent) {
+        // Update student's interest status - Use PascalCase for C# backend
+        // IMPORTANT: Set AssignedCompanyID to null to make them available for assignment
+        const updatedStudent = {
+          StudentID: currentStudent.studentID || currentStudent.StudentID,
+          UserID: currentStudent.userID || currentStudent.UserID,
+          Name: currentStudent.name || currentStudent.Name,
+          RegNo: currentStudent.regNo || currentStudent.RegNo,
+          Technology: currentStudent.technology || currentStudent.Technology,
+          HasShownInterest: true, // Set to true
+          InternshipStatus: 1, // 1 = Shown Interest
+          AssignedCompanyID: null, // CRITICAL: Set to null to make them available
+          AssignedCompanyName: null, // CRITICAL: Set to null
+          CertificateStatus: currentStudent.certificateStatus || currentStudent.CertificateStatus || 1,
+        };
+        
+        const studentId = currentStudent.studentID || currentStudent.StudentID;
+        await apiService.updateStudent(studentId, updatedStudent);
+        console.log('InternshipRequest: Interest updated successfully with InternshipStatus: 1');
+      }
       
       Alert.alert(
         'Success', 
         'Your interest has been registered! Admin will assign you to a company based on availability.',
         [{ text: 'OK', onPress: () => navigate('StudentDashboard') }]
       );
-    } catch (err) {
-      console.error('Error showing interest:', err);
+    } catch (error) {
+      console.error('InternshipRequest: Error showing interest:', error);
       Alert.alert('Error', 'Failed to register interest. Please try again.');
     }
   };
 
-  const availableCompanies = companies.filter(company => 
-    company.isActive && company.currentInternships < company.maxInternships
-  );
-  
-  const filteredCompanies = availableCompanies.filter(company =>
+  // Filter companies based on search query
+  const filteredCompanies = availableCompanies.filter(company => 
     company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    company.area.toLowerCase().includes(searchQuery.toLowerCase())
+    company.area.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    company.technologies.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#667EEA" />
-        <Text style={styles.loadingText}>Loading companies...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadCompanies}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -138,24 +135,34 @@ const InternshipRequestScreen = () => {
 
       {/* Company List */}
       <ScrollView style={styles.listContainer}>
-        {filteredCompanies.length === 0 ? (
+        {loading ? (
+          <View style={styles.emptyContainer}>
+            <ActivityIndicator size="large" color="#667EEA" />
+            <Text style={styles.emptySubtext}>Loading companies...</Text>
+          </View>
+        ) : filteredCompanies.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No companies available</Text>
-            <Text style={styles.emptySubtext}>All internship slots are currently filled</Text>
+            <Text style={styles.emptySubtext}>
+              {availableCompanies.length === 0 
+                ? 'All internship slots are currently filled'
+                : 'No companies match your search'}
+            </Text>
           </View>
         ) : (
           filteredCompanies.map((company) => (
-            <View key={company.id} style={styles.internshipCard}>
+            <View key={company.companyID} style={styles.internshipCard}>
               <View style={styles.cardContent}>
                 <Text style={styles.companyName}>{company.name}</Text>
                 <Text style={styles.positionName}>{company.area}</Text>
+                <Text style={styles.technologiesText}>{company.technologies}</Text>
                 <Text style={styles.slotsText}>
                   Available Slots: {company.maxInternships - company.currentInternships}/{company.maxInternships}
                 </Text>
               </View>
               <TouchableOpacity
                 style={styles.requestButton}
-                onPress={() => handleRequest(company.id)}
+                onPress={() => handleRequest(company.companyID)}
               >
                 <Text style={styles.requestButtonText}>Show Interest</Text>
               </TouchableOpacity>
@@ -265,6 +272,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     opacity: 0.9,
   },
+  technologiesText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    opacity: 0.9,
+    marginTop: 4,
+  },
   requestButton: {
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
@@ -297,41 +310,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     textAlign: 'center',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    paddingHorizontal: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#FF5722',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: '#667EEA',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
 });
 

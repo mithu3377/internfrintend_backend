@@ -1,5 +1,7 @@
 // API Service for React Native
-const API_BASE_URL = 'http://192.168.1.4:7000/api'; // Local development API URL
+const API_BASE_URL = 'http://10.0.2.2:5143/api'; // Local development API URL (Android emulator)
+// For iOS Simulator use: 'http://localhost:5143/api'
+// For Physical Device: Replace 10.0.2.2 with your computer's IP address
 
 class ApiService {
   constructor() {
@@ -94,7 +96,27 @@ class ApiService {
         throw new Error(errorMessage);
       }
 
-      const result = await response.json();
+      // Safely handle cases where response has no JSON body (e.g., 204 No Content)
+      const contentType = response.headers.get('content-type') || '';
+      if (response.status === 204) {
+        console.log('API success response: No Content (204)');
+        return {};
+      }
+
+      // Some endpoints may return empty body with 200/201
+      // Read as text first; parse JSON only when present
+      const rawText = await response.text();
+      if (!rawText) {
+        console.log('API success response: Empty body');
+        return {};
+      }
+
+      if (!contentType.toLowerCase().includes('application/json')) {
+        console.log('API success response (non-JSON):', rawText);
+        return { message: rawText };
+      }
+
+      const result = JSON.parse(rawText);
       console.log('API success response:', result);
       return result;
     } catch (error) {
@@ -118,8 +140,8 @@ class ApiService {
   }
 
   // Authentication API calls
-  async login(email, password) {
-    return this.apiCall('/auth/login', 'POST', { email, password });
+  async login(username, password) {
+    return this.apiCall('/auth/login', 'POST', { username, password });
   }
 
   async register(userData) {

@@ -7,16 +7,14 @@ import {
   ScrollView,
   TextInput,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useNavigation } from '../context/NavigationContext.js';
-import apiService from '../services/ApiService';
+import apiService from '../services/ApiService.js';
 
 const HiredInternsScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [assignments, setAssignments] = useState([]);
+  const [hiredInterns, setHiredInterns] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const { navigate } = useNavigation();
 
   useEffect(() => {
@@ -26,42 +24,25 @@ const HiredInternsScreen = () => {
   const loadAssignments = async () => {
     try {
       setLoading(true);
-      setError(null);
-      const assignmentsData = await apiService.getAssignments();
-      setAssignments(assignmentsData);
-    } catch (err) {
-      console.error('Error loading assignments:', err);
-      setError('Failed to load assignments');
+      const assignments = await apiService.getAssignments();
+      setHiredInterns(assignments || []);
+    } catch (error) {
+      console.error('HiredInternsScreen: Error loading assignments:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const hiredInterns = assignments.filter(assignment => 
-    assignment.status === 1 || assignment.status === 2 || assignment.status === 3
-  );
-
   const filteredInterns = hiredInterns.filter(intern =>
-    intern.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    intern.studentName.toLowerCase().includes(searchQuery.toLowerCase())
+    intern.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    intern.companyName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color="#667EEA" />
-        <Text style={styles.loadingText}>Loading assignments...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadAssignments}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
@@ -102,7 +83,7 @@ const HiredInternsScreen = () => {
           </View>
         ) : (
           filteredInterns.map((intern) => (
-            <View key={intern.id} style={styles.internCard}>
+            <View key={intern.assignmentID} style={styles.internCard}>
               <View style={styles.cardContent}>
                 <Text style={styles.companyName}>{intern.companyName}</Text>
                 <Text style={styles.positionName}>{intern.studentName}</Text>
@@ -263,40 +244,14 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
   },
-  loadingContainer: {
-    flex: 1,
+  centerContent: {
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
     color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    paddingHorizontal: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#FF5722',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: '#667EEA',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
 });
 

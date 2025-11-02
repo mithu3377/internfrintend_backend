@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useAuth } from '../context/AuthContext.js';
 import { useNavigation } from '../context/NavigationContext.js';
@@ -19,7 +19,29 @@ import InternshipRequestScreen from '../screens/InternshipRequestScreen.js';
 
 const AppNavigator = () => {
   const { isAuthenticated, user } = useAuth();
-  const { currentScreen } = useNavigation();
+  const { currentScreen, navigate } = useNavigation();
+
+  // If authenticated but on LoginScreen, navigate to appropriate dashboard
+  useEffect(() => {
+    if (isAuthenticated && currentScreen === 'LoginScreen') {
+      console.log('AppNavigator: User authenticated, redirecting from LoginScreen to dashboard');
+      console.log('AppNavigator: User role:', user?.role);
+      
+      // Helper function to navigate to the correct dashboard based on role
+      const navigateToRoleDashboard = (role) => {
+        console.log('AppNavigator: Navigating to role-based dashboard for role:', role);
+        if (role === 'admin') {
+          navigate('AdminDashboard');
+        } else if (role === 'student') {
+          navigate('StudentDashboard');
+        } else if (role === 'manager') {
+          navigate('ManagerDashboard');
+        }
+      };
+      
+      navigateToRoleDashboard(user?.role);
+    }
+  }, [isAuthenticated, currentScreen, user?.role, navigate]);
 
   if (!isAuthenticated) {
     return <LoginScreen />;

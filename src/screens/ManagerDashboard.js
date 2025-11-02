@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,68 +9,44 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext.js';
 import { useNavigation } from '../context/NavigationContext.js';
-import apiService from '../services/ApiService';
+import apiService from '../services/ApiService.js';
 
 const ManagerDashboard = () => {
   const { user, logout } = useAuth();
   const { navigate } = useNavigation();
   const [managerCompany, setManagerCompany] = useState(null);
-  const [assignments, setAssignments] = useState([]);
+  const [activeInterns, setActiveInterns] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadManagerData();
-  }, [user, loadManagerData]);
+  }, []);
 
-  const loadManagerData = useCallback(async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
+  const loadManagerData = async () => {
     try {
       setLoading(true);
-      setError(null);
+      // Load manager's companies
+      const companies = await apiService.getCompaniesByManager(user?.id || 0);
       
-      // Get companies managed by this manager
-      const companies = await apiService.getCompaniesByManager(user.id);
       if (companies && companies.length > 0) {
-        const company = companies[0]; // Assuming one company per manager
-        setManagerCompany(company);
+        setManagerCompany(companies[0]);
         
-        // Get assignments for this company
-        const companyAssignments = await apiService.getAssignmentsByCompany(company.id);
-        setAssignments(companyAssignments);
+        // Load active interns for this company
+        const interns = await apiService.getAssignmentsByCompany(companies[0].companyID);
+        setActiveInterns(interns || []);
       }
-    } catch (err) {
-      console.error('Error loading manager data:', err);
-      setError('Failed to load manager data');
+    } catch (error) {
+      console.error('ManagerDashboard: Error loading data:', error);
     } finally {
       setLoading(false);
     }
-  }, [user]);
-
-  const activeInterns = assignments.filter(assignment => 
-    assignment.status === 1 || assignment.status === 2
-  );
+  };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.container, styles.centerContent]}>
         <ActivityIndicator size="large" color="#667EEA" />
-        <Text style={styles.loadingText}>Loading dashboard...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadManagerData}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
@@ -82,7 +58,7 @@ const ManagerDashboard = () => {
         <Text style={styles.buildingIcon}>🏢</Text>
         <View style={styles.welcomeTextContainer}>
           <Text style={styles.welcomeText}>Welcome Back,</Text>
-          <Text style={styles.userName}>{user?.name}</Text>
+          <Text style={styles.userName}>{user?.name || user?.username}</Text>
           <Text style={styles.companyName}>{managerCompany?.name || 'Company Not Found'}</Text>
           <Text style={styles.internshipCount}>
             Active Interns: {activeInterns.length}/{managerCompany?.maxInternships || 0}
@@ -133,6 +109,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
   welcomeBanner: {
     backgroundColor: '#667EEA',
@@ -212,41 +197,6 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   actionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    paddingHorizontal: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#FF5722',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: '#667EEA',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
-  retryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',

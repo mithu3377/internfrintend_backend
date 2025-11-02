@@ -1,137 +1,127 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
-using InternshipPortal.API.Services;
+using InternshipPortal.API.Data;
 using InternshipPortal.API.Models;
+using Microsoft.EntityFrameworkCore;
 
-namespace InternshipPortal.API.Controllers
+namespace InternshipPortal.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class StudentsController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    // [Authorize] // Temporarily disabled for development
-    public class StudentsController : ControllerBase
+    private readonly InternshipPortalContext _context;
+
+    public StudentsController(InternshipPortalContext context)
     {
-        private readonly IStudentService _studentService;
+        _context = context;
+    }
 
-        public StudentsController(IStudentService studentService)
+    // GET: api/students
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<Student>>> GetStudents()
+    {
+        return await _context.Students.ToListAsync();
+    }
+
+    // GET: api/students/5
+    [HttpGet("{id}")]
+    public async Task<ActionResult<Student>> GetStudent(int id)
+    {
+        var student = await _context.Students.FindAsync(id);
+
+        if (student == null)
         {
-            _studentService = studentService;
+            return NotFound();
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAllStudents()
+        return student;
+    }
+
+    // GET: api/students/user/5
+    [HttpGet("user/{userId}")]
+    public async Task<ActionResult<Student>> GetStudentByUserId(int userId)
+    {
+        var student = await _context.Students
+            .FirstOrDefaultAsync(s => s.UserID == userId);
+
+        if (student == null)
         {
-            try
-            {
-                var students = await _studentService.GetAllStudentsAsync();
-                return Ok(students);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while fetching students", error = ex.Message });
-            }
+            return NotFound();
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetStudent(int id)
-        {
-            try
-            {
-                var student = await _studentService.GetStudentByIdAsync(id);
-                if (student == null)
-                    return NotFound(new { message = "Student not found" });
+        return student;
+    }
 
-                return Ok(student);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while fetching student", error = ex.Message });
-            }
+    // GET: api/students/available
+    [HttpGet("available")]
+    public async Task<ActionResult<IEnumerable<Student>>> GetAvailableStudents()
+    {
+        var students = await _context.Students
+            .Where(s => s.InternshipStatus == 1 && s.HasShownInterest && !s.AssignedCompanyID.HasValue)
+            .ToListAsync();
+        
+        return students;
+    }
+
+    // POST: api/students
+    [HttpPost]
+    public async Task<ActionResult<Student>> PostStudent(Student student)
+    {
+        _context.Students.Add(student);
+        await _context.SaveChangesAsync();
+
+        return CreatedAtAction(nameof(GetStudent), new { id = student.StudentID }, student);
+    }
+
+    // PUT: api/students/5
+    [HttpPut("{id}")]
+    public async Task<IActionResult> PutStudent(int id, Student student)
+    {
+        if (id != student.StudentID)
+        {
+            return BadRequest();
         }
 
-        [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetStudentByUserId(int userId)
-        {
-            try
-            {
-                var student = await _studentService.GetStudentByUserIdAsync(userId);
-                if (student == null)
-                    return NotFound(new { message = "Student not found" });
+        _context.Entry(student).State = EntityState.Modified;
 
-                return Ok(student);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while fetching student", error = ex.Message });
-            }
+        try
+        {
+            await _context.SaveChangesAsync();
         }
-
-        [HttpPost]
-        // [Authorize(Roles = "admin")] // Temporarily disabled for development
-        public async Task<IActionResult> CreateStudent([FromBody] Student student)
+        catch (DbUpdateConcurrencyException)
         {
-            try
+            if (!StudentExists(id))
             {
-                var result = await _studentService.CreateStudentAsync(student);
-                return CreatedAtAction(nameof(GetStudent), new { id = result.Id }, result);
+                return NotFound();
             }
-            catch (Exception ex)
+            else
             {
-                return StatusCode(500, new { message = "An error occurred while creating student", error = ex.Message });
-            }
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateStudent(int id, [FromBody] Student student)
-        {
-            try
-            {
-                var result = await _studentService.UpdateStudentAsync(id, student);
-                if (result == null)
-                    return NotFound(new { message = "Student not found" });
-
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while updating student", error = ex.Message });
-            }
-        }
-
-        [HttpDelete("{id}")]
-        // [Authorize(Roles = "admin")] // Temporarily disabled for development
-        public async Task<IActionResult> DeleteStudent(int id)
-        {
-            try
-            {
-                var result = await _studentService.DeleteStudentAsync(id);
-                if (!result)
-                    return NotFound(new { message = "Student not found" });
-
-                return Ok(new { message = "Student deleted successfully" });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while deleting student", error = ex.Message });
+                throw;
             }
         }
 
-        [HttpGet("available")]
-        public async Task<IActionResult> GetAvailableStudents()
+        return NoContent();
+    }
+
+    // DELETE: api/students/5
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteStudent(int id)
+    {
+        var student = await _context.Students.FindAsync(id);
+        if (student == null)
         {
-            try
-            {
-                var students = await _studentService.GetAvailableStudentsAsync();
-                return Ok(students);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while fetching available students", error = ex.Message });
-            }
+            return NotFound();
         }
+
+        _context.Students.Remove(student);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    private bool StudentExists(int id)
+    {
+        return _context.Students.Any(e => e.StudentID == id);
     }
 }
-
-
-
-
 

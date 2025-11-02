@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,75 +7,20 @@ import {
   ScrollView,
   Alert,
   TextInput,
-  ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext.js';
 import { useNavigation } from '../context/NavigationContext.js';
-import apiService from '../services/ApiService';
 
 const StudentDetailsScreen = () => {
   const [selectedStatus, setSelectedStatus] = useState('Update Status');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [progressValue, setProgressValue] = useState('');
-  const [assignments, setAssignments] = useState([]);
-  const [, setManagerCompany] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [updating, setUpdating] = useState(false);
-  
   const { user } = useAuth();
   const { navigate } = useNavigation();
 
-  useEffect(() => {
-    loadManagerData();
-  }, [user, loadManagerData]);
-
-  const loadManagerData = useCallback(async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
-
-    // Check if user is a manager, if not redirect to appropriate dashboard
-    if (user?.role !== 'manager') {
-      if (user?.role === 'student') {
-        navigate('StudentDashboard');
-        return;
-      } else if (user?.role === 'admin') {
-        navigate('AdminDashboard');
-        return;
-      }
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Get companies managed by this manager
-      const companies = await apiService.getCompaniesByManager(user.id);
-      if (companies && companies.length > 0) {
-        const company = companies[0];
-        setManagerCompany(company);
-        
-        // Get assignments for this company
-        const companyAssignments = await apiService.getAssignmentsByCompany(company.id);
-        setAssignments(companyAssignments);
-      }
-    } catch (err) {
-      console.error('Error loading manager data:', err);
-      setError('Failed to load student data');
-    } finally {
-      setLoading(false);
-    }
-  }, [user, navigate]);
-
-  const activeAssignments = assignments.filter(assignment => 
-    assignment.status === 'assigned' || assignment.status === 'in_progress'
-  );
-
-  // Use assignment ID from route params or first available
-  const assignmentId = activeAssignments[0]?.id;
-  const currentAssignment = activeAssignments.find(a => a.id === assignmentId);
+  const assignments = [];
+  const activeAssignments = [];
+  const currentAssignment = undefined;
 
   const statusOptions = ['In-Progress', 'Completed'];
 
@@ -84,7 +29,7 @@ const StudentDetailsScreen = () => {
     setIsDropdownOpen(false);
   };
 
-  const handleUpdateProgress = async () => {
+  const handleUpdateProgress = () => {
     if (!currentAssignment) {
       Alert.alert('Error', 'No student assignment found. Please ensure students are assigned to your company first.');
       return;
@@ -95,45 +40,19 @@ const StudentDetailsScreen = () => {
       return;
     }
 
-    try {
-      setUpdating(true);
-
     if (selectedStatus === 'In-Progress') {
       const progress = parseInt(progressValue, 10);
       if (isNaN(progress) || progress < 0 || progress > 100) {
         Alert.alert('Error', 'Please enter a valid progress value (0-100)');
         return;
       }
-        
-        // Update assignment progress
-        await apiService.updateAssignment(currentAssignment.id, {
-          progress: progress,
-          status: 'in_progress',
-        });
-        
       Alert.alert('Success', `Progress updated to ${progress}%`);
     } else if (selectedStatus === 'Completed') {
-        // Complete the internship
-        await apiService.updateAssignment(currentAssignment.id, {
-          status: 'completed',
-          endDate: new Date().toISOString(),
-        });
-        
       Alert.alert('Success', 'Internship marked as completed!');
-      }
-
-      // Refresh data
-      loadManagerData();
-      
-    } catch (err) {
-      console.error('Error updating progress:', err);
-      Alert.alert('Error', 'Failed to update progress. Please try again.');
-    } finally {
-      setUpdating(false);
     }
   };
 
-  const handleIssueCertificate = async () => {
+  const handleIssueCertificate = () => {
     if (!currentAssignment) {
       Alert.alert('Error', 'No assignment selected');
       return;
@@ -143,63 +62,11 @@ const StudentDetailsScreen = () => {
       Alert.alert('Error', 'Internship must be completed before issuing certificate');
       return;
     }
-
-    try {
-      setUpdating(true);
-      
-      // Create certificate
-      const certificateData = {
-        assignmentId: currentAssignment.id,
-        studentId: currentAssignment.studentId,
-        companyId: currentAssignment.companyId,
-        studentName: currentAssignment.studentName,
-        companyName: currentAssignment.companyName,
-        issueDate: new Date().toISOString(),
-        duration: '3 months',
-        skillsAcquired: 'Various technical skills',
-        projectDescription: 'Internship project completion',
-        isVerified: true,
-      };
-
-      await apiService.createCertificate(certificateData);
-      
-      // Update assignment to mark certificate as issued
-      await apiService.updateAssignment(currentAssignment.id, {
-        certificateIssued: true,
-      });
       
     Alert.alert('Success', 'Certificate issued successfully!');
-      
-      // Refresh data
-      loadManagerData();
-      
-    } catch (err) {
-      console.error('Error issuing certificate:', err);
-      Alert.alert('Error', 'Failed to issue certificate. Please try again.');
-    } finally {
-      setUpdating(false);
-    }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#667EEA" />
-        <Text style={styles.loadingText}>Loading student details...</Text>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadManagerData}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const updating = false;
 
   return (
     <ScrollView style={styles.container}>
@@ -532,41 +399,6 @@ const styles = StyleSheet.create({
   },
   disabledButtonText: {
     color: '#999',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-  },
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    paddingHorizontal: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#FF5722',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: '#667EEA',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   noAssignmentContainer: {
     backgroundColor: '#FFF3CD',

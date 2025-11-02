@@ -1,8 +1,10 @@
 {
   "ExpandedNodes": [
     "",
-    "\\InternshipPortal.API"
+    "\\Controllers",
+    "\\Data",
+    "\\Models"
   ],
-  "SelectedNode": "\\InternshipPortal.API\\InternshipPortal.db",
+  "SelectedNode": "\\Controllers\\AuthController.cs",
   "PreviewInSolutionExplorer": false
 }
